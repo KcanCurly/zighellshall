@@ -26,5 +26,11 @@ if (is_init) {
 }
 ```
 
+
+
+# Known Issues
+run_NtCreateThreadEx doesn't work for some reason, try to use fiber to execute your payloads \
+[ZigFiber](https://github.com/KcanCurly/ZigFiber)
+
 # Credits
 [Maldev Academy](https://maldevacademy.com/)
