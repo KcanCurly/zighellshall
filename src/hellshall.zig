@@ -1,30 +1,29 @@
 const std = @import("std");
-const testing = std.testing;
-const CRC = std.hash.crc;
-const WORD = std.os.windows.WORD;
-const DWORD = std.os.windows.DWORD;
-const PVOID = std.os.windows.PVOID;
-const ULONG_PTR = std.os.windows.ULONG_PTR;
-const LDR_DATA_TABLE_ENTRY = std.os.windows.LDR_DATA_TABLE_ENTRY;
-const PLDR_DATA_TABLE_ENTRY = *LDR_DATA_TABLE_ENTRY;
-const BYTE = std.os.windows.BYTE;
-const PBYTE = [*]u8;
 const windows = std.os.windows;
+const testing = std.testing;
+const WORD = windows.WORD;
+const DWORD = windows.DWORD;
+const PVOID = windows.PVOID;
+const ULONG_PTR = windows.ULONG_PTR;
+const LDR_DATA_TABLE_ENTRY = windows.LDR_DATA_TABLE_ENTRY;
+const PLDR_DATA_TABLE_ENTRY = *LDR_DATA_TABLE_ENTRY;
+const BYTE = windows.BYTE;
+const PBYTE = *BYTE;
 
 const NtAllocateVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(.C) windows.NTSTATUS;
 const NtProtectVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, regionSize: *usize, NewProtection: u32, OldProtection: *u32) callconv(.C) windows.NTSTATUS;
 const NtCreateThreadEx_FnType = fn (
     ThreadHandle: *?*windows.HANDLE,
     DesiredAccess: windows.ACCESS_MASK,
-    ObjectAttributes: ?*windows.OBJECT_ATTRIBUTES, // nullable
+    ObjectAttributes: ?*windows.OBJECT_ATTRIBUTES,
     ProcessHandle: windows.HANDLE,
     StartRoutine: ?*anyopaque,
-    Argument: ?*void, // nullable
+    Argument: ?*void,
     CreateFlags: bool,
-    ZeroBits: ?*void, // nullable usize (optional)
-    StackSize: ?*void, // nullable usize (optional)
-    MaximumStackSize: ?*void, // nullable usize (optional)
-    AttributeList: ?*void, // nullable
+    ZeroBits: ?*void,
+    StackSize: ?*void,
+    MaximumStackSize: ?*void,
+    AttributeList: ?*void,
 ) callconv(.C) windows.NTSTATUS;
 const NtWaitForSingleObject_FnType = fn (
     handle: ?*windows.HANDLE,
@@ -33,11 +32,11 @@ const NtWaitForSingleObject_FnType = fn (
 ) callconv(.C) windows.NTSTATUS;
 const NtOpenKey_FnType = fn (hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(.C) windows.NTSTATUS;
 
-pub const NtAllocateVirtualMemory_Fn: *const NtAllocateVirtualMemory_FnType = @ptrCast(@extern(*const NtAllocateVirtualMemory_FnType, .{ .name = "RunSyscall" }));
-pub const NtProtectVirtualMemory_Fn: *const NtProtectVirtualMemory_FnType = @ptrCast(@extern(*const NtProtectVirtualMemory_FnType, .{ .name = "RunSyscall" }));
-pub const run_NtCreateThreadEx: *const NtCreateThreadEx_FnType = @ptrCast(@extern(*const NtCreateThreadEx_FnType, .{ .name = "RunSyscall" }));
-pub const run_NtWaitForSingleObject: *const NtWaitForSingleObject_FnType = @ptrCast(@extern(*const NtWaitForSingleObject_FnType, .{ .name = "RunSyscall" }));
-pub const NtOpenKey_Fn: *const NtOpenKey_FnType = @ptrCast(@extern(*const NtOpenKey_FnType, .{ .name = "RunSyscall" }));
+const NtAllocateVirtualMemory_Fn: *const NtAllocateVirtualMemory_FnType = @ptrCast(@extern(*const NtAllocateVirtualMemory_FnType, .{ .name = "RunSyscall" }));
+const NtProtectVirtualMemory_Fn: *const NtProtectVirtualMemory_FnType = @ptrCast(@extern(*const NtProtectVirtualMemory_FnType, .{ .name = "RunSyscall" }));
+const NtCreateThreadEx_Fn: *const NtCreateThreadEx_FnType = @ptrCast(@extern(*const NtCreateThreadEx_FnType, .{ .name = "RunSyscall" }));
+const NtWaitForSingleObject_Fn: *const NtWaitForSingleObject_FnType = @ptrCast(@extern(*const NtWaitForSingleObject_FnType, .{ .name = "RunSyscall" }));
+const NtOpenKey_Fn: *const NtOpenKey_FnType = @ptrCast(@extern(*const NtOpenKey_FnType, .{ .name = "RunSyscall" }));
 
 pub fn run_NtAllocateVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(.C) windows.NTSTATUS {
     SetSyscall(g_Nt.NtAllocateVirtualMemory) catch |err| {
@@ -55,6 +54,38 @@ pub fn run_NtProtectVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*an
     return NtProtectVirtualMemory_Fn(hProcess, ppBaseAddress, regionSize, NewProtection, OldProtection);
 }
 
+pub fn run_NtCreateThreadEx(
+    ThreadHandle: *?*windows.HANDLE,
+    DesiredAccess: windows.ACCESS_MASK,
+    ObjectAttributes: ?*windows.OBJECT_ATTRIBUTES,
+    ProcessHandle: windows.HANDLE,
+    StartRoutine: ?*anyopaque,
+    Argument: ?*void,
+    CreateFlags: bool,
+    ZeroBits: ?*void,
+    StackSize: ?*void,
+    MaximumStackSize: ?*void,
+    AttributeList: ?*void,
+) callconv(.C) windows.NTSTATUS {
+    SetSyscall(g_Nt.NtCreateThreadEx) catch |err| {
+        std.debug.print("SetSyscall failed: {}\n", .{err});
+        return;
+    };
+    return NtCreateThreadEx_Fn(ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, StartRoutine, Argument, CreateFlags, ZeroBits, StackSize, MaximumStackSize, AttributeList);
+}
+
+pub fn run_NtWaitForSingleObject(
+    handle: ?*windows.HANDLE,
+    alertable: bool,
+    timeout: ?*void,
+) callconv(.C) windows.NTSTATUS {
+    SetSyscall(g_Nt.NtWaitForSingleObject) catch |err| {
+        std.debug.print("SetSyscall failed: {}\n", .{err});
+        return;
+    };
+    return NtWaitForSingleObject_Fn(handle, alertable, timeout);
+}
+
 pub fn run_NtOpenKey(hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(.C) windows.NTSTATUS {
     SetSyscall(g_Nt.NtAllocateVirtualMemory) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
@@ -63,7 +94,6 @@ pub fn run_NtOpenKey(hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MA
     return NtOpenKey_Fn(hProcess, DesiredAccess, ObjectAttributes);
 }
 
-// generated by 'Hasher'
 pub const NtAllocateVirtualMemory_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtAllocateVirtualMemory".ptr)));
 pub const NtProtectVirtualMemory_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtProtectVirtualMemory".ptr)));
 pub const NtCreateThreadEx_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtCreateThreadEx".ptr)));
@@ -73,8 +103,8 @@ pub const NtCreateFile_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtC
 pub const NtCreateSection_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtCreateSection".ptr)));
 pub const NtMapViewOfSection_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtMapViewOfSection".ptr)));
 pub const NtUnmapViewOfSection_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtUnmapViewOfSection".ptr)));
-pub const NtClose_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtClose".ptr)));
 
+pub const NtClose_CRC32: comptime_int = crc32b(@constCast(std.mem.span("NtClose".ptr)));
 pub const NtOpenKey_CRC32 = crc32b(@constCast(std.mem.span("NtOpenKey".ptr)));
 
 const c = @cImport({
@@ -130,7 +160,6 @@ pub fn crc32b(str: []u8) u32 {
     return ~crc;
 }
 
-// initialize the global 'g_NtdllConf' structure - called only by 'FetchNtSyscall' once
 pub fn InitNtdllConfigStructure() bool {
     // getting peb
     const peb = std.os.windows.peb();
@@ -142,21 +171,16 @@ pub fn InitNtdllConfigStructure() bool {
 
     // getting ntdll.dll module (skipping our local image element)
     const pLdr: PLDR_DATA_TABLE_ENTRY = @ptrFromInt(@intFromPtr(@as(PBYTE, @ptrCast(peb.Ldr.InMemoryOrderModuleList.Flink.Flink))) - 0x10);
-    std.debug.print("{*}\n", .{pLdr});
-
     // getting ntdll's base address
     const uModule: ULONG_PTR = @intFromPtr(pLdr.DllBase);
 
     if (uModule <= 0)
         return false;
-    std.debug.print("{}\n", .{uModule});
 
     // fetching the dos header of ntdll
     const pImgDosHdr: *c.IMAGE_DOS_HEADER = @ptrFromInt(uModule);
     if (pImgDosHdr.e_magic != c.IMAGE_DOS_SIGNATURE)
         return false;
-
-    std.debug.print("{*}\n", .{pImgDosHdr});
 
     const z1: usize = @intCast(pImgDosHdr.e_lfanew);
 
@@ -164,7 +188,6 @@ pub fn InitNtdllConfigStructure() bool {
     const pImgNtHdrs: *c.IMAGE_NT_HEADERS = @ptrFromInt(uModule + z1);
     if (pImgNtHdrs.Signature != c.IMAGE_NT_SIGNATURE)
         return false;
-    std.debug.print("{}\n", .{pImgNtHdrs.Signature});
 
     const va = pImgNtHdrs.OptionalHeader.DataDirectory[c.IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
     const z2: usize = @intCast(va);
@@ -173,7 +196,6 @@ pub fn InitNtdllConfigStructure() bool {
     const pImgExpDir: ?*c.IMAGE_EXPORT_DIRECTORY = @ptrFromInt(uModule + z2);
     if (pImgExpDir == null)
         return false;
-    std.debug.print("{*}\n", .{pImgExpDir});
 
     // initalizing the 'g_NtdllConf' structure's element
     g_NtdllConf.uModule = uModule;
@@ -182,12 +204,10 @@ pub fn InitNtdllConfigStructure() bool {
     g_NtdllConf.pdwArrayOfAddresses = @ptrFromInt(uModule + @as(usize, pImgExpDir.?.AddressOfFunctions));
     g_NtdllConf.pwArrayOfOrdinals = @ptrFromInt(uModule + @as(usize, pImgExpDir.?.AddressOfNameOrdinals));
 
-    std.debug.print("{}\n", .{g_NtdllConf});
-
     return true;
 }
 
-fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
+fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL, verbose: bool) bool {
     if (dwSysHash > 0) {
         pNtSys.dwSyscallHash = dwSysHash;
     } else return false;
@@ -200,7 +220,9 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
         const pFuncAddress = g_NtdllConf.uModule + g_NtdllConf.pdwArrayOfAddresses[g_NtdllConf.pwArrayOfOrdinals[i]];
 
         if (crc32b(zig_str) == dwSysHash) {
-            std.debug.print("Found! {s} -> {x}\n", .{ zig_str, pFuncAddress });
+            if (verbose) {
+                std.debug.print("Found! {s} -> {x}\n", .{ zig_str, pFuncAddress });
+            }
 
             pNtSys.pSyscallAddress = @as(*anyopaque, @ptrFromInt(pFuncAddress));
 
@@ -213,12 +235,18 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
                 byte_array[6] == 0x00 and
                 byte_array[7] == 0x00)
             {
-                std.debug.print("Scenerio 1 catched\n", .{});
+                if (verbose) {
+                    std.debug.print("Scenerio 1 catched\n", .{});
+                }
+
                 const high = byte_array[5];
                 const low = byte_array[4];
 
                 pNtSys.dwSSn = (@as(u16, high) << 8) | @as(u16, low);
-                std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                if (verbose) {
+                    std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                }
+
                 break;
             } else {}
             if (byte_array[0] == 0xE9) {
@@ -231,12 +259,17 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
                         byte_array[6 + b * SEARCH_DOWN] == 0x00 and
                         byte_array[7 + b * SEARCH_DOWN] == 0x00)
                     {
-                        std.debug.print("Scenerio 2 catched\n", .{});
+                        if (verbose) {
+                            std.debug.print("Scenerio 2 catched\n", .{});
+                        }
                         const high = byte_array[5 + b * SEARCH_DOWN];
                         const low = byte_array[4 + b * SEARCH_DOWN];
 
                         pNtSys.dwSSn = (@as(u16, high) << 8) | @as(u16, low) - @as(u16, @truncate(b));
-                        std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        if (verbose) {
+                            std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        }
+
                         break;
                     }
                     const addr = @intFromPtr(pNtSys.pSyscallAddress);
@@ -248,12 +281,16 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
                         byte_array2[6 + b * SEARCH_DOWN] == 0x00 and
                         byte_array2[7 + b * SEARCH_DOWN] == 0x00)
                     {
-                        std.debug.print("Scenerio 2 catched\n", .{});
+                        if (verbose) {
+                            std.debug.print("Scenerio 2 catched\n", .{});
+                        }
                         const high = byte_array2[5 + b * SEARCH_DOWN];
                         const low = byte_array2[4 + b * SEARCH_DOWN];
 
                         pNtSys.dwSSn = (@as(u16, high) << 8) | @as(u16, low) + @as(u16, @truncate(b));
-                        std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        if (verbose) {
+                            std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        }
                         break;
                     }
                 }
@@ -268,12 +305,16 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
                         byte_array[6 + b * SEARCH_DOWN] == 0x00 and
                         byte_array[7 + b * SEARCH_DOWN] == 0x00)
                     {
-                        std.debug.print("Scenerio 3 catched\n", .{});
+                        if (verbose) {
+                            std.debug.print("Scenerio 3 catched\n", .{});
+                        }
                         const high = byte_array[5 + b * SEARCH_DOWN];
                         const low = byte_array[4 + b * SEARCH_DOWN];
 
                         pNtSys.dwSSn = (@as(u16, high) << 8) | @as(u16, low) - @as(u16, @truncate(b));
-                        std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        if (verbose) {
+                            std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        }
                         break;
                     }
                     const addr = @intFromPtr(pNtSys.pSyscallAddress);
@@ -285,12 +326,16 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
                         byte_array2[6 + b * SEARCH_DOWN] == 0x00 and
                         byte_array2[7 + b * SEARCH_DOWN] == 0x00)
                     {
-                        std.debug.print("Scenerio 3 catched\n", .{});
+                        if (verbose) {
+                            std.debug.print("Scenerio 3 catched\n", .{});
+                        }
                         const high = byte_array2[5 + b * SEARCH_DOWN];
                         const low = byte_array2[4 + b * SEARCH_DOWN];
 
                         pNtSys.dwSSn = (@as(u16, high) << 8) | @as(u16, low) + @as(u16, @truncate(b));
-                        std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        if (verbose) {
+                            std.debug.print("SSN: {}\n", .{pNtSys.dwSSn});
+                        }
                         break;
                     }
                 }
@@ -318,66 +363,95 @@ fn FetchNtSyscall(dwSysHash: DWORD, pNtSys: *NT_SYSCALL) bool {
     return true;
 }
 
-pub fn InitializeNtSyscalls() bool {
-    if (!FetchNtSyscall(NtAllocateVirtualMemory_CRC32, &g_Nt.NtAllocateVirtualMemory)) {
+pub fn InitializeNtSyscalls(verbose: bool) bool {
+    if (!FetchNtSyscall(NtAllocateVirtualMemory_CRC32, &g_Nt.NtAllocateVirtualMemory, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtAllocateVirtualMemory \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtAllocateVirtualMemory Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtAllocateVirtualMemory.dwSSn, g_Nt.NtAllocateVirtualMemory.pSyscallInstAddress });
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtAllocateVirtualMemory Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtAllocateVirtualMemory.dwSSn, g_Nt.NtAllocateVirtualMemory.pSyscallInstAddress });
+    }
 
-    if (!FetchNtSyscall(NtProtectVirtualMemory_CRC32, &g_Nt.NtProtectVirtualMemory)) {
+    if (!FetchNtSyscall(NtProtectVirtualMemory_CRC32, &g_Nt.NtProtectVirtualMemory, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtProtectVirtualMemory \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtProtectVirtualMemory Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtProtectVirtualMemory.dwSSn, g_Nt.NtProtectVirtualMemory.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtCreateThreadEx_CRC32, &g_Nt.NtCreateThreadEx)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtProtectVirtualMemory Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtProtectVirtualMemory.dwSSn, g_Nt.NtProtectVirtualMemory.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtCreateThreadEx_CRC32, &g_Nt.NtCreateThreadEx, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtCreateThreadEx \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtCreateThreadEx Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateThreadEx.dwSSn, g_Nt.NtCreateThreadEx.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtWaitForSingleObject_CRC32, &g_Nt.NtWaitForSingleObject)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtCreateThreadEx Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateThreadEx.dwSSn, g_Nt.NtCreateThreadEx.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtWaitForSingleObject_CRC32, &g_Nt.NtWaitForSingleObject, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtWaitForSingleObject \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtWaitForSingleObject Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtWaitForSingleObject.dwSSn, g_Nt.NtWaitForSingleObject.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtCreateFile_CRC32, &g_Nt.NtCreateFile)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtWaitForSingleObject Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtWaitForSingleObject.dwSSn, g_Nt.NtWaitForSingleObject.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtCreateFile_CRC32, &g_Nt.NtCreateFile, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtCreateFile \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtCreateFile Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateFile.dwSSn, g_Nt.NtCreateFile.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtCreateSection_CRC32, &g_Nt.NtCreateSection)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtCreateFile Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateFile.dwSSn, g_Nt.NtCreateFile.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtCreateSection_CRC32, &g_Nt.NtCreateSection, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtCreateSection \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtCreateSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateSection.dwSSn, g_Nt.NtCreateSection.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtMapViewOfSection_CRC32, &g_Nt.NtMapViewOfSection)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtCreateSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtCreateSection.dwSSn, g_Nt.NtCreateSection.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtMapViewOfSection_CRC32, &g_Nt.NtMapViewOfSection, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtMapViewOfSection \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtMapViewOfSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtMapViewOfSection.dwSSn, g_Nt.NtMapViewOfSection.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtUnmapViewOfSection_CRC32, &g_Nt.NtUnmapViewOfSection)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtMapViewOfSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtMapViewOfSection.dwSSn, g_Nt.NtMapViewOfSection.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtUnmapViewOfSection_CRC32, &g_Nt.NtUnmapViewOfSection, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtUnmapViewOfSection \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtUnmapViewOfSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtUnmapViewOfSection.dwSSn, g_Nt.NtUnmapViewOfSection.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtClose_CRC32, &g_Nt.NtClose)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtUnmapViewOfSection Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtUnmapViewOfSection.dwSSn, g_Nt.NtUnmapViewOfSection.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtClose_CRC32, &g_Nt.NtClose, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtClose \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtClose Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtClose.dwSSn, g_Nt.NtClose.pSyscallInstAddress });
 
-    if (!FetchNtSyscall(NtOpenKey_CRC32, &g_Nt.NtOpenKey)) {
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtClose Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtClose.dwSSn, g_Nt.NtClose.pSyscallInstAddress });
+    }
+
+    if (!FetchNtSyscall(NtOpenKey_CRC32, &g_Nt.NtOpenKey, verbose)) {
         std.debug.print("[!] Failed In Obtaining The Syscall Number Of NtOpenKey \n", .{});
         return false;
     }
-    std.debug.print("[+] Syscall Number Of NtOpenKey Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtOpenKey.dwSSn, g_Nt.NtOpenKey.pSyscallInstAddress });
+
+    if (verbose) {
+        std.debug.print("[+] Syscall Number Of NtOpenKey Is : 0x{x} \n\t\t>> Executing 'syscall' instruction Of Address : 0x{*}\n", .{ g_Nt.NtOpenKey.dwSSn, g_Nt.NtOpenKey.pSyscallInstAddress });
+    }
 
     return true;
 }
@@ -388,5 +462,5 @@ pub fn SetSyscall(syscall: NT_SYSCALL) !void {
 
 test "basic" {
     try testing.expect(InitNtdllConfigStructure() == true);
-    try testing.expect(InitializeNtSyscalls() == true);
+    try testing.expect(InitializeNtSyscalls(true) == true);
 }
