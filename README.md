@@ -14,7 +14,6 @@ Add following to build.zig:
 const hellshall_dep = b.dependency("ZigHellsHall", .{ .target = target, .optimize = optimize }); \
 const hellshall_mod = hellshall_dep.module("ZigHellsHall"); \
 exe_mod.addImport("hellshall", hellshall_mod); 
-exe_mod.addAssemblyFile(b.path("src/hellshall.s"));
 ```
 
 Add following to main.zig:
