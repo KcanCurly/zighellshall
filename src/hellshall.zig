@@ -10,8 +10,8 @@ const PLDR_DATA_TABLE_ENTRY = *LDR_DATA_TABLE_ENTRY;
 const BYTE = windows.BYTE;
 const PBYTE = *BYTE;
 
-const NtAllocateVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS;
-const NtProtectVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, regionSize: *usize, NewProtection: u32, OldProtection: *u32) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS;
+const NtAllocateVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS;
+const NtProtectVirtualMemory_FnType = fn (hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, regionSize: *usize, NewProtection: u32, OldProtection: *u32) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS;
 const NtCreateThreadEx_FnType = fn (
     ThreadHandle: *?*windows.HANDLE,
     DesiredAccess: windows.ACCESS_MASK,
@@ -24,13 +24,13 @@ const NtCreateThreadEx_FnType = fn (
     StackSize: ?*void,
     MaximumStackSize: ?*void,
     AttributeList: ?*void,
-) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS;
+) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS;
 const NtWaitForSingleObject_FnType = fn (
     handle: ?*windows.HANDLE,
     alertable: bool,
     timeout: ?*void,
-) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS;
-const NtOpenKey_FnType = fn (hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS;
+) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS;
+const NtOpenKey_FnType = fn (hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS;
 
 const NtAllocateVirtualMemory_Fn: *const NtAllocateVirtualMemory_FnType = @ptrCast(@extern(*const NtAllocateVirtualMemory_FnType, .{ .name = "RunSyscall" }));
 const NtProtectVirtualMemory_Fn: *const NtProtectVirtualMemory_FnType = @ptrCast(@extern(*const NtProtectVirtualMemory_FnType, .{ .name = "RunSyscall" }));
@@ -38,7 +38,7 @@ const NtCreateThreadEx_Fn: *const NtCreateThreadEx_FnType = @ptrCast(@extern(*co
 const NtWaitForSingleObject_Fn: *const NtWaitForSingleObject_FnType = @ptrCast(@extern(*const NtWaitForSingleObject_FnType, .{ .name = "RunSyscall" }));
 const NtOpenKey_Fn: *const NtOpenKey_FnType = @ptrCast(@extern(*const NtOpenKey_FnType, .{ .name = "RunSyscall" }));
 
-pub fn run_NtAllocateVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS {
+pub fn run_NtAllocateVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, zeroBits: usize, regionSize: *usize, allocType: u32, protect: u32) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS {
     SetSyscall(g_Nt.NtAllocateVirtualMemory) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
         return;
@@ -46,7 +46,7 @@ pub fn run_NtAllocateVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*a
     return NtAllocateVirtualMemory_Fn(hProcess, ppBaseAddress, zeroBits, regionSize, allocType, protect);
 }
 
-pub fn run_NtProtectVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, regionSize: *usize, NewProtection: u32, OldProtection: *u32) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS {
+pub fn run_NtProtectVirtualMemory(hProcess: windows.HANDLE, ppBaseAddress: *?*anyopaque, regionSize: *usize, NewProtection: u32, OldProtection: *u32) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS {
     SetSyscall(g_Nt.NtProtectVirtualMemory) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
         return;
@@ -66,7 +66,7 @@ pub fn run_NtCreateThreadEx(
     StackSize: ?*void,
     MaximumStackSize: ?*void,
     AttributeList: ?*void,
-) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS {
+) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS {
     SetSyscall(g_Nt.NtCreateThreadEx) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
         return;
@@ -78,7 +78,7 @@ pub fn run_NtWaitForSingleObject(
     handle: ?*windows.HANDLE,
     alertable: bool,
     timeout: ?*void,
-) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS {
+) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS {
     SetSyscall(g_Nt.NtWaitForSingleObject) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
         return;
@@ -86,7 +86,7 @@ pub fn run_NtWaitForSingleObject(
     return NtWaitForSingleObject_Fn(handle, alertable, timeout);
 }
 
-pub fn run_NtOpenKey(hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(std.builtin.CallingConvention.winapi.x86_64_win) windows.NTSTATUS {
+pub fn run_NtOpenKey(hProcess: *windows.HANDLE, DesiredAccess: windows.ACCESS_MASK, ObjectAttributes: *const windows.OBJECT_ATTRIBUTES) callconv(std.builtin.CallingConvention.winapi) windows.NTSTATUS {
     SetSyscall(g_Nt.NtAllocateVirtualMemory) catch |err| {
         std.debug.print("SetSyscall failed: {}\n", .{err});
         return;
