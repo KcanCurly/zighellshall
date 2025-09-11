@@ -14,10 +14,7 @@ pub fn build(b: *std.Build) void {
     lib_mod.addAssemblyFile(b.path("src/hellshall.s"));
 
     var main_tests = b.addTest(.{
-        .root_source_file = b.path("src/hellshall.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
+        .root_module = lib_mod,
     });
 
     const test_step = b.step("test", "Run unit tests");
